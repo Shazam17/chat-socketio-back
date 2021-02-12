@@ -1,5 +1,3 @@
-const { createRequire } = require('module');
-
 const sock = require('socket.io');
 
 const server = require('http').createServer( ((req, res) => {
@@ -19,7 +17,7 @@ class ChatClient {
     }
 }
 
-const generateId = () => Math.random() * 1000;
+const generateId = () => Math.floor(Math.random() * 1000);
 
 class ChatApp {
 
@@ -40,17 +38,20 @@ class ChatApp {
 
         io.on("connection", (socket) => {
             console.log("Made socket connection");
-
             socket.username = "Anonym";
 
             let id = generateId();
             this.connected.push(new ChatClient(id, socket.username));
+            socket.broadcast.emit('new_person', {id:id, name:socket.username});
+            socket.emit('new_person', {id:id, name:socket.username});
 
             socket.on('change_username', (data) => {
                 console.log("change_username");
                 const index = this.connected.findIndex((item) => item.id === id);
                 this.connected[index].userName = data.username;
                 socket.username = data.username;
+                socket.broadcast.emit('new_person', {id:id, name:data.username});
+                socket.emit('new_person', {id:id, name:data.username});
             });
 
             socket.on('send_message', (arg) => {
@@ -63,6 +64,7 @@ class ChatApp {
 
             socket.on('disconnect',() => {
                 this.connected = this.connected.filter((item) => item.id !== id);
+                socket.broadcast.emit('user_disconnect', {id:id});
             });
         });
 
